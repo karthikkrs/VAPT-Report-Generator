@@ -1,0 +1,123 @@
+{
+    "metadata": {
+        "author": "Security Team",
+        "title": "VAPT Assessment Report",
+        "subject": "Web Application Security Assessment",
+        "assessment_date": "2024-03-04",
+        "test_type": "Web Application Penetration Testing"
+    },
+    "content": {
+        "title": "More Web Application",
+        "executive_summary": "During the security assessment of the More Web Application, we identified several security findings that require attention. The application demonstrates good security practices in many areas, but some vulnerabilities were discovered that should be addressed.",
+        "findings": [
+            {
+                "title": "Unauthenticated Access to Hub (SignalR)",
+                "severity": "Medium",
+                "affected_url": "https://example.com/hub",
+                "description": "The SignalR hub endpoint was found to be accessible without proper authentication, potentially allowing unauthorized access to real-time communication channels.",
+                "replication_steps": [
+                    {
+                        "title": "Identify SignalR Endpoint",
+                        "description": "Using browser developer tools, observe the WebSocket connection to the SignalR hub.",
+                        "command": "curl -v wss://example.com/hub",
+                        "response": "< HTTP/1.1 101 Switching Protocols\n< Upgrade: websocket\n< Connection: Upgrade\n< Sec-WebSocket-Accept: q4xkcO32u1u=",
+                        "findings": [
+                            "WebSocket connection established without authentication",
+                            "No authorization header required"
+                        ]
+                    },
+                    {
+                        "title": "Test Hub Methods",
+                        "description": "Attempt to call hub methods without authentication token.",
+                        "command": "wscat -c wss://example.com/hub\n> {\"protocol\":\"json\",\"version\":1}\n> {\"type\":1,\"target\":\"GetUsers\",\"arguments\":[]}\n",
+                        "response": "{\"type\":1,\"target\":\"ReceiveMessage\",\"arguments\":[{\"users\":[...]}]}",
+                        "findings": [
+                            "Successfully retrieved user list without authentication",
+                            "Hub methods are accessible to unauthenticated users"
+                        ]
+                    }
+                ],
+                "impact": "Unauthorized access to real-time communication channels could lead to information disclosure and potential manipulation of message flows.",
+                "remediation": "Implement proper authentication middleware for the SignalR hub and validate authentication tokens before allowing connections.",
+                "reference": "https://learn.microsoft.com/aspnet/core/signalr/security",
+                "cvss_score": {
+                    "base": 2.7,
+                    "temporal": 2.4,
+                    "environmental": 2.6
+                }
+            },
+            {
+                "title": "Outdated jQuery Version",
+                "severity": "Low",
+                "affected_url": "https://example.com/",
+                "description": "The application is using an outdated version of jQuery (1.12.4) which contains known security vulnerabilities.",
+                "replication_steps": [
+                    {
+                        "title": "Identify jQuery Version",
+                        "description": "Inspect the page source to identify the jQuery version in use.",
+                        "command": "curl -s https://example.com/ | grep jquery",
+                        "response": "<script src=\"/js/jquery-1.12.4.min.js\"></script>",
+                        "findings": [
+                            "jQuery version 1.12.4 detected",
+                            "This version was released in 2016"
+                        ]
+                    },
+                    {
+                        "title": "Verify Known Vulnerabilities",
+                        "description": "Check the National Vulnerability Database for known issues.",
+                        "command": "curl -s \"https://services.nvd.nist.gov/rest/json/cves/2.0?keywordSearch=jquery%201.12.4\"",
+                        "response": "{\n  \"vulnerabilities\": [\n    {\n      \"cve\": {\n        \"id\": \"CVE-2020-11023\",\n        \"description\": \"XSS vulnerability...\"\n      }\n    }\n  ]\n}",
+                        "findings": [
+                            "Multiple CVEs found for this version",
+                            "Includes XSS and prototype pollution vulnerabilities"
+                        ]
+                    }
+                ],
+                "impact": "Known vulnerabilities in outdated jQuery versions could be exploited for cross-site scripting (XSS) attacks.",
+                "remediation": "Update jQuery to the latest version (3.7.1 or newer) and test for compatibility issues.",
+                "reference": "https://jquery.com/download/",
+                "cvss_score": {
+                    "base": 2.7,
+                    "temporal": 2.4,
+                    "environmental": 2.6
+                }
+            },
+            {
+                "title": "Web Server Information Disclosure",
+                "severity": "Low",
+                "affected_url": "https://example.com/",
+                "description": "The web server is disclosing version information in HTTP response headers.",
+                "replication_steps": [
+                    {
+                        "title": "Check HTTP Headers",
+                        "description": "Send a request to the server and analyze the response headers.",
+                        "command": "curl -I https://example.com/",
+                        "response": "HTTP/1.1 200 OK\nServer: Apache/2.4.41 (Ubuntu)\nX-Powered-By: PHP/7.4.3",
+                        "findings": [
+                            "Server header reveals Apache version 2.4.41",
+                            "X-Powered-By header reveals PHP version 7.4.3"
+                        ]
+                    },
+                    {
+                        "title": "Verify Header Consistency",
+                        "description": "Check headers across different endpoints.",
+                        "command": "for path in / /api /about; do echo \"=== $path ===\"; curl -I https://example.com$path | grep -E 'Server:|X-Powered-By:'; done",
+                        "response": "=== / ===\nServer: Apache/2.4.41 (Ubuntu)\nX-Powered-By: PHP/7.4.3\n=== /api ===\nServer: Apache/2.4.41 (Ubuntu)\nX-Powered-By: PHP/7.4.3",
+                        "findings": [
+                            "Version information consistently disclosed across endpoints",
+                            "Headers not stripped in production environment"
+                        ]
+                    }
+                ],
+                "impact": "Version information disclosure could aid attackers in identifying vulnerable components for targeted attacks.",
+                "remediation": "Configure the web server to remove or modify version information from HTTP response headers.",
+                "reference": "https://owasp.org/www-project-web-security-testing-guide/v42/4-Web_Application_Security_Testing/01-Information_Gathering/02-Fingerprint_Web_Server.html",
+                "cvss_score": {
+                    "base": 2.7,
+                    "temporal": 2.4,
+                    "environmental": 2.6
+                }
+            }
+        ]
+    }
+}
